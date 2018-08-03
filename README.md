@@ -5,7 +5,7 @@ Supports parsing and rendering of XML files.
 ## Example System Config
 ```
 {
-  "_id": "xml-service",
+  "_id": "xml-converter",
   "type": "system:microservice",
   "docker": {
     "image": "sesamcommunity/xml:latest",
@@ -30,7 +30,7 @@ Supports parsing and rendering of XML files.
   "type": "pipe",
   "source": {
     "type": "json",
-    "system": "xml-service",
+    "system": "xml-converter",
     "url": "/?url=http://my-ssh-server:5000/some-input-file.xml&xml_path=customerRecords.customerRecord&updated_path=system.customerChangeDateTime&since=2001-12-17T09:30:47%2B02:00",
   "transform": {
     "type": "dtl",
@@ -75,7 +75,7 @@ will be converted to
   },
   "sink": {
     "type": "json",
-    "system": "xml-service",
+    "system": "xml-converter",
     "url": "/?url=http://my-ssh-server:5000/some-output-file.xml"
   }
 }
