@@ -31,7 +31,7 @@ Supports parsing and rendering of XML files.
   "source": {
     "type": "json",
     "system": "xml-service",
-    "url": "/?url=http://my-ssh-server/some-input-file.xml&xml_path=customerRecords.customerRecord&updated_path=system.customerChangeDateTime&since=2001-12-17T09:30:47%2B02:00",
+    "url": "/?url=http://my-ssh-server:5000/some-input-file.xml&xml_path=customerRecords.customerRecord&updated_path=system.customerChangeDateTime&since=2001-12-17T09:30:47%2B02:00",
   "transform": {
     "type": "dtl",
     "rules": {
@@ -76,7 +76,7 @@ will be converted to
   "sink": {
     "type": "json",
     "system": "xml-service",
-    "url": "/?url=http://my-ssh-server/some-output-file.xml"
+    "url": "/?url=http://my-ssh-server:5000/some-output-file.xml"
   }
 }
 ```
