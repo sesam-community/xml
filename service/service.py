@@ -1,6 +1,7 @@
 import json
 import xmltodict
 
+from xml.parsers.expat import ExpatError
 from flask import Flask, request, Response
 import os
 import requests
@@ -19,7 +20,10 @@ class XmlParser:
         self._since = args.get("since")
 
     def parse(self, stream):
-        root_element = xmltodict.parse(stream)
+        try:
+            root_element = xmltodict.parse(stream)
+        except ExpatError as e:
+            logger.info(f"root element is failing with {e}")
 
         if self._xml_path is not None:
 
@@ -28,7 +32,15 @@ class XmlParser:
             else:
                 l = [Dotdictify(root_element).get(self._xml_path)]
         else:
+            try:
+                imbedded_xml = xmltodict.parse("<html>" + root_element["ichicsr"]["safetyreport"]["patient"]["parent"]["parentmedicalrelevanttext"] + "</html>")
+                root_element["ichicsr"]["safetyreport"]["patient"]["parent"]["parentmedicalrelevanttext"] = imbedded_xml["html"]
+            except TypeError as e:
+                logger.info(f"None imbedded xml defined. Failing with error: {e}")
+            except ExpatError as e:
+                logger.info(f"None imbedded xml defined. Failing with error: {e}")
             l = [root_element]
+
         if self._updated_path is not None:
             for entity in l:
                 b = Dotdictify(entity)
@@ -44,11 +56,19 @@ class XmlParser:
                 yield e
 
 
-@app.route("/", methods=["GET"])
+@app.route("/file", methods=["GET"])
 def get():
     parser = XmlParser(request.args)
     url = request.args["url"]
-    xml = requests.get(url).text
+    xml = requests.get(url).content.decode('utf-8-sig')
+    return Response(response=json.dumps(parser.parse(xml)), mimetype='application/json')
+
+@app.route("/filebulk", methods=["GET"])
+def get_folder():
+    parser = XmlParser(request.args)
+    #url = request.args["url"]
+    xml = requests.get(url).content.decode('utf-8-sig')
+    #print(xml)
     return Response(response=json.dumps(parser.parse(xml)), mimetype='application/json')
 
 
