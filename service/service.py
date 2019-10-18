@@ -11,6 +11,19 @@ from dotdictify import Dotdictify
 
 app = Flask(__name__)
 
+##Helper function for yielding on batch fetch
+def stream_json(entities):
+    first = True
+    yield '['
+    for i, row in enumerate(entities):
+        if not first:
+            yield ','
+        else:
+            first = False
+        yield json.dumps(row)
+    yield ']'
+##
+
 logger = logger.Logger('xml')
 
 class XmlParser:
@@ -63,13 +76,21 @@ def get():
     xml = requests.get(url).content.decode('utf-8-sig')
     return Response(response=json.dumps(parser.parse(xml)), mimetype='application/json')
 
+
 @app.route("/filebulk", methods=["GET"])
 def get_folder():
     parser = XmlParser(request.args)
-    #url = request.args["url"]
-    xml = requests.get(url).content.decode('utf-8-sig')
-    #print(xml)
-    return Response(response=json.dumps(parser.parse(xml)), mimetype='application/json')
+    url = request.args["url"]
+    folder_url = requests.get(url)
+    if not folder_url.ok:
+        app.logger.error(f"Failed to connect to url with error: {folder_url.content}")
+        raise
+
+    for xml_file in folder_url:
+        logger.info(f"This is to check if files are being looped correctly: Printing file {xml_file}")
+        xml = xml_file.content.decode('utf-8-sig')
+        
+        return Response(stream_json(xml), mimetype='application/json')
 
 
 @app.route('/', methods=["POST"])
