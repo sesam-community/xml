@@ -52,6 +52,9 @@ class XmlParser:
                 logger.info(f"None imbedded xml defined. Failing with error: {e}")
             except ExpatError as e:
                 logger.info(f"None imbedded xml defined. Failing with error: {e}")
+            except KeyError as e:
+                logger.info(f"None imbedded xml element of {e}")
+
             l = [root_element]
 
         if self._updated_path is not None:
@@ -81,16 +84,19 @@ def get():
 def get_folder():
     parser = XmlParser(request.args)
     url = request.args["url"]
-    folder_url = requests.get(url)
-    if not folder_url.ok:
-        app.logger.error(f"Failed to connect to url with error: {folder_url.content}")
-        raise
+    xml = requests.get(url).content  
+    xml_json = json.loads(xml)
+    xml_content = []
+    for xml_file in xml_json["files"]:
+        try:
+            parsed_xml = parser.parse(str(xml_file))
+            #logger.info(f"Printing content of parsed xml : {parsed_xml}")
+            xml_content.append(parsed_xml)
+        except Exception as e:
+            logger.info(f"Skipping xml file with error : {e}")
 
-    for xml_file in folder_url:
-        logger.info(f"This is to check if files are being looped correctly: Printing file {xml_file}")
-        xml = xml_file.content.decode('utf-8-sig')
-        
-        return Response(stream_json(xml), mimetype='application/json')
+    logger.info("Finished runnig parse to write to sesam pipe...")
+    return Response(stream_json(xml_content), mimetype='application/json')
 
 
 @app.route('/', methods=["POST"])
