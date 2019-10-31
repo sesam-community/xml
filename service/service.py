@@ -15,7 +15,7 @@ app = Flask(__name__)
 ##Helper function for yielding on batch fetch
 def stream_json(entities):
     logger.info("streaming started")
-    number_id = 112
+    #number_id = 112
     try:
         first = True
         yield '['
@@ -24,16 +24,16 @@ def stream_json(entities):
                 yield ','
             else:
                 first = False
-            yield json.dumps({'alt_id': f'{number_id}'})
-            yield ','
+            #yield json.dumps({'alt_id': f'{number_id}'})
+            #yield ','
             yield json.dumps(row)
-            number_id + 1
+            #number_id + 1
         yield ']'
     except Exception as e:
         logger.error(f"Exiting with error : {e}")
     logger.info("stream ended")
 ##
-
+ 
 logger = logger.Logger('xml')
 
 class XmlParser:
