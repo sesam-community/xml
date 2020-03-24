@@ -15,7 +15,6 @@ app = Flask(__name__)
 ##Helper function for yielding on batch fetch
 def stream_json(entities):
     logger.info("streaming started")
-    #number_id = 112
     try:
         first = True
         yield '['
@@ -23,11 +22,8 @@ def stream_json(entities):
             if not first:
                 yield ','
             else:
-                first = False
-            #yield json.dumps({'alt_id': f'{number_id}'})
-            #yield ','
+                first = False          
             yield json.dumps(row)
-            #number_id + 1
         yield ']'
     except Exception as e:
         logger.error(f"Exiting with error : {e}")
@@ -54,19 +50,8 @@ class XmlParser:
                 l = list(Dotdictify(root_element).get(self._xml_path))
             else:
                 l = [Dotdictify(root_element).get(self._xml_path)]
+        
         else:
-            try:
-                imbedded_xml = xmltodict.parse("<html>" + root_element["ichicsr"]["safetyreport"]["patient"]["parent"]["parentmedicalrelevanttext"] + "</html>")
-                root_element["ichicsr"]["safetyreport"]["patient"]["parent"]["parentmedicalrelevanttext"] = imbedded_xml["html"]
-            except TypeError as e:
-                logger.info(f"None imbedded xml defined. Failing with error: {e}")
-            except ExpatError as e:
-                logger.info(f"None imbedded xml defined. Failing with error: {e}")
-            except KeyError as e:
-                logger.info(f"None imbedded xml element of {e}")
-            except UnboundLocalError as e:
-                logger.info(f"None imbedded xml element of {e}")
-
             l = [root_element]
 
         if self._updated_path is not None:
@@ -102,7 +87,6 @@ def get_folder():
     for xml_file in xml_to_dict['files']:
         try:
             parsed_xml = parser.parse(str(xml_file))
-            #logger.info(f"Printing content of parsed xml : {parsed_xml}")
             xml_content.append(parsed_xml[0])
         except Exception as e:
             logger.info(f"Skipping xml file with error : {e}")
