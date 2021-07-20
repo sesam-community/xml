@@ -12,6 +12,10 @@ from dotdictify import Dotdictify
 
 app = Flask(__name__)
 
+CONFIG = {
+"default_encoding" : "utf-8"
+}
+
 ##Helper function for yielding on batch fetch
 def stream_json(entities):
     logger.info("streaming started")
@@ -97,6 +101,9 @@ def get_folder():
 
 @app.route('/', methods=["POST"])
 def post():
+    """
+    Accepts and parses args.url, then sends new request to the given url param
+    """
     url = request.args["url"]
     xml = xmltodict.unparse(request.get_json(), pretty=True, full_document=False).encode('utf-8')
     r = requests.post(url, xml)
@@ -105,6 +112,50 @@ def post():
     else:
         return Response(response="Great Success!")
 
+
+@app.route('/json_string_to_xml_file', methods=["POST"])
+def json_string_to_xml_file():
+    """
+    Accepts and parses args.url, then sends new request to the given url param
+    """
+    url = request.args["url"]
+    xml = xmltodict.unparse(request.get_json(), pretty=True, full_document=False).encode('utf-8')
+    r = requests.post(url, xml)
+    if r.status_code != 200:
+        return Response(response=r.text, status=r.status_code)
+    else:
+        return Response(response="Great Success!")
+
+@app.route('/xml_string_to_json', methods=["POST"])
+def xml_string_to_json():
+    
+    """
+    - http request args: 
+        xml_payload_node : what json key holds the xml string that needs convertion 
+        xml_encoding : the encoding to use when parsing the xml data
+    - accepts a application/json HTTP body
+        sesam namespaces needs to be removed
+    - xml attributes will be prefixed by "@" in the json data
+    """
+    
+    xml_node = request.args["xml_payload_node"]
+    xml_encoding = request.args["xml_payload_encoding"]
+    
+    if xml_encoding.strip() == "":
+        xml_encoding = CONFIG["default_encoding"] 
+
+    request_payload = request.get_json()
+
+    try:
+        data_dict = xmltodict.parse(request_payload[xml_node],encoding=xml_encoding, xml_attribs=True)
+        json_data = json.dumps(data_dict)
+    except Exception as ex:
+        
+        logger.error(ex)
+        
+
+    return Response(response=json_data, mimetype='application/json')
+    
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT',5000)))
