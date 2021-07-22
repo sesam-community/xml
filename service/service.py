@@ -158,11 +158,14 @@ def xml_string_to_json():
         for item in yield_entities(request_payload):
 
             if preserve_entity is True:
+                #Keep all incoming properties in addition to the parsed xml
                 item["xml_as_json"] = xmltodict.parse(item[xml_payload_node],encoding=xml_payload_encoding, xml_attribs=True)
                 result.append(item)
             else:
                 xml_as_dict = {}
+                xml_as_dict = preserve_sesam_special_fields(xml_as_dict, item)
                 xml_as_dict["xml_as_json"] = xmltodict.parse(item[xml_payload_node],encoding=xml_payload_encoding, xml_attribs=True)
+                                
                 result.append(xml_as_dict)
 
         json_data = json.dumps(result)
@@ -172,6 +175,22 @@ def xml_string_to_json():
         
     return Response(response=json_data, mimetype='application/json')
     
+def preserve_sesam_special_fields(target, original):
+    """
+    Preserves special and reserved fields.
+    ref https://docs.sesam.io/entitymodel.html#reserved-fields
+
+    """
+
+    sys_attribs = ["_deleted","_hash","_id","_previous","_ts","_updated","_filtered", "$ids", "$childen", "$replaced"]
+
+    for attr in sys_attribs:
+
+        if attr in original:
+            target[attr] = original[attr]
+          
+    return target
+
 def yield_entities(data):
 
     for item in data:
