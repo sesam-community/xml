@@ -182,7 +182,7 @@ def preserve_sesam_special_fields(target, original):
 
     """
 
-    sys_attribs = ["_deleted","_hash","_id","_previous","_ts","_updated","_filtered", "$ids", "$childen", "$replaced"]
+    sys_attribs = ["_deleted","_hash","_id","_previous","_ts","_updated","_filtered", "$ids", "$children", "$replaced"]
 
     for attr in sys_attribs:
 
