@@ -13,7 +13,7 @@ from dotdictify import Dotdictify
 app = Flask(__name__)
 
 CONFIG = {
-"default_encoding" : "utf-8"
+"default_xml_payload_encoding" : "utf-8"
 }
 
 ##Helper function for yielding on batch fetch
@@ -133,29 +133,94 @@ def xml_string_to_json():
     - http request args: 
         xml_payload_node : what json key holds the xml string that needs convertion 
         xml_encoding : the encoding to use when parsing the xml data
+        preserve_entity : if True, adds the xml parsed through xmltodict as a new node in payload, else returns only parsed xml
     - accepts a application/json HTTP body
         sesam namespaces needs to be removed
     - xml attributes will be prefixed by "@" in the json data
     """
     
-    xml_node = request.args["xml_payload_node"]
-    xml_encoding = request.args["xml_payload_encoding"]
+    xml_payload_node = request.args["xml_payload_node"]
+    xml_payload_encoding = request.args["xml_payload_encoding"]
     
-    if xml_encoding.strip() == "":
-        xml_encoding = CONFIG["default_encoding"] 
+    if xml_payload_encoding.strip() == "":
+        xml_payload_encoding = CONFIG["default_xml_payload_encoding"] 
+
+    preserve_entity = parse_boolean_from_param(request.args["preserve_entity"])
+
+    logger.info("Received args: " + str(dict(request.args)) + " Preserve entity: " + str(preserve_entity))
 
     request_payload = request.get_json()
 
     try:
-        data_dict = xmltodict.parse(request_payload[xml_node],encoding=xml_encoding, xml_attribs=True)
-        json_data = json.dumps(data_dict)
-    except Exception as ex:
+        result = []
         
-        logger.error(ex)
-        
+        #Sesam packs entities in an array before firing off a request and expects an array back. 
+        for item in yield_entities(request_payload):
 
+            if preserve_entity is True:
+                #Keep all incoming properties in addition to the parsed xml
+                item["xml_as_json"] = xmltodict.parse(item[xml_payload_node],encoding=xml_payload_encoding, xml_attribs=True)
+                result.append(item)
+            else:
+                xml_as_dict = {}
+                xml_as_dict = preserve_sesam_special_fields(xml_as_dict, item)
+                xml_as_dict["xml_as_json"] = xmltodict.parse(item[xml_payload_node],encoding=xml_payload_encoding, xml_attribs=True)
+                                
+                result.append(xml_as_dict)
+
+        json_data = json.dumps(result)
+        #print(json_data)
+    except Exception as ex:
+        logger.error(f"Exiting with error: {ex}")
+        
     return Response(response=json_data, mimetype='application/json')
     
+def preserve_sesam_special_fields(target, original):
+    """
+    Preserves special and reserved fields.
+    ref https://docs.sesam.io/entitymodel.html#reserved-fields
+
+    """
+
+    sys_attribs = ["_deleted","_hash","_id","_previous","_ts","_updated","_filtered", "$ids", "$children", "$replaced"]
+
+    for attr in sys_attribs:
+
+        if attr in original:
+            target[attr] = original[attr]
+          
+    return target
+
+def yield_entities(data):
+
+    for item in data:
+
+        yield item
+
+def parse_boolean_from_param(param):
+    """
+    Helper to establish True or False 
+    """
+    result = False
+
+    if param.strip() == "":
+        result = False
+    elif param.strip() == "True":
+        result = True
+    elif param.strip() == "true":
+        result = True
+    elif param.strip() == "False":
+        result = False
+    elif param.strip() == "false":
+        result = False
+    elif param.strip() == "1":
+        result = True
+    elif param.strip() == "0":
+        result = False
+    else:
+        return result
+
+    return result
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT',5000)))
