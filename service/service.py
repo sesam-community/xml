@@ -151,30 +151,29 @@ def xml_string_to_json():
     logger.info("Received args: " + str(dict(request.args)) + " Preserve entity: " + str(preserve_entity))
 
     request_payload = request.get_json()
-    
-    xmlString = str    
+      
     result = []
 
     try:
         #Sesam packs entities in an array before firing off a request and expects an array back. 
         for item in yield_entities(request_payload):
+            xmlString = item[xml_payload_node]
 
             if(item[xml_payload_node].startswith("~b")):
-                xmlString = base64.b64decode(item[xml_payload_node][2:])  # substring starting from position 2                            
-
-            xmlString = xmlString.decode(xml_payload_encoding)  # decode from binary to string
+                xmlString = xmlString[2:]  # substring starting from position 2                            
+            
+            xmlString = base64.b64decode(xmlString).decode(xml_payload_encoding)  # decode from base64 to binary, then to string
 
             if preserve_entity is True:
-                #Keep all incoming properties in addition to the parsed xml
-                item["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)
-                result.append(item["xml_as_json"])
+                #Keep all incoming properties in addition to the parsed xml                
+                item["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)                                     
+                result.append(item.copy())          
+     
             else:
                 xml_as_dict = {}
                 xml_as_dict = preserve_sesam_special_fields(xml_as_dict, item)
                 xml_as_dict["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)
                                 
-                result.append(xml_as_dict)
-
     except Exception as ex:
         logger.error(f"Exiting with error: {ex}")
         

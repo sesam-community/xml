@@ -1,6 +1,6 @@
 FROM python:3-alpine
-LABEL author="Jonas Als Christensen"
-LABEL author.email="jonas.christensen@sesam.io"
+LABEL author="Endre Brønnum"
+LABEL author.email="endre.bronnum@sesam.io"
 
 RUN apk update
 RUN apk add openssl-dev libffi-dev musl-dev gcc make
