@@ -1,5 +1,6 @@
 FROM python:3-alpine
-MAINTAINER Baard H. Rehn Johansen "ashkan.vahidishams@sesam.io"
+LABEL author="Endre Brønnum"
+LABEL author.email="endre.bronnum@sesam.io"
 
 RUN apk update
 RUN apk add openssl-dev libffi-dev musl-dev gcc make
