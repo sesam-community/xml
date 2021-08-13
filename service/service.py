@@ -138,7 +138,11 @@ def xml_string_to_json():
     - accepts a application/json HTTP body
         sesam namespaces needs to be removed
     - xml attributes will be prefixed by "@" in the json data
+    - accepts entities with non-existing XML string
     """
+    
+    if(not request.is_json):        
+        return "Request body was not JSON", 400
     
     xml_payload_node = request.args["xml_payload_node"]
     xml_payload_encoding = request.args["xml_payload_encoding"]
@@ -147,32 +151,36 @@ def xml_string_to_json():
         xml_payload_encoding = CONFIG["default_xml_payload_encoding"] 
 
     preserve_entity = parse_boolean_from_param(request.args["preserve_entity"])
-
     logger.info("Received args: " + str(dict(request.args)) + " Preserve entity: " + str(preserve_entity))
-
-    request_payload = request.get_json()
-      
+    request_payload = request.get_json()    
     result = []
 
     try:
-        #Sesam packs entities in an array before firing off a request and expects an array back. 
-        for item in yield_entities(request_payload):
-            xmlString = item[xml_payload_node]
-
-            if(item[xml_payload_node].startswith("~b")):
-                xmlString = xmlString[2:]  # substring starting from position 2                            
+        # Sesam packs entities in an array before firing off a request and expects an array back. 
+        for item in yield_entities(request_payload):            
+            xmlString = None
+            hasXMLData = item.get(xml_payload_node) != None
             
-            xmlString = base64.b64decode(xmlString).decode(xml_payload_encoding)  # decode from base64 to binary, then to string
+            if(hasXMLData):
+                xmlString = item[xml_payload_node]                                  
+
+                if(xmlString.startswith("~b")):
+                    xmlString = xmlString[2:]  # substring starting from position 2                            
+                
+                xmlString = base64.b64decode(xmlString).decode(xml_payload_encoding)  # decode from base64 to binary, then to string
 
             if preserve_entity is True:
-                #Keep all incoming properties in addition to the parsed xml                
-                item["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)                                     
+                #Keep all incoming properties in addition to the parsed xml
+                if(hasXMLData):                
+                    item["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)                                     
                 result.append(item.copy())          
      
             else:
                 xml_as_dict = {}
                 xml_as_dict = preserve_sesam_special_fields(xml_as_dict, item)
-                xml_as_dict["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)
+                if(hasXMLData):
+                    xml_as_dict["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)
+                result.append(xml_as_dict)
                                 
     except Exception as ex:
         logger.error(f"Exiting with error: {ex}")
