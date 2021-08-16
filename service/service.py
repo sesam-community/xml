@@ -152,40 +152,46 @@ def xml_string_to_json():
 
     preserve_entity = parse_boolean_from_param(request.args["preserve_entity"])
     logger.info("Received args: " + str(dict(request.args)) + " Preserve entity: " + str(preserve_entity))
-    request_payload = request.get_json()    
-    result = []
-
-    try:
-        # Sesam packs entities in an array before firing off a request and expects an array back. 
-        for item in yield_entities(request_payload):            
-            xmlString = None
-            hasXMLData = item.get(xml_payload_node) != None
-            
-            if(hasXMLData):
-                xmlString = item[xml_payload_node]                                  
-
-                if(xmlString.startswith("~b")):
-                    xmlString = xmlString[2:]  # substring starting from position 2                            
+    request_payload = request.get_json()
+    
+    def emit_entities():
+        try:
+            # Sesam packs entities in an array before firing off a request and expects an array back. 
+            yield '['
+            first = True
+            for item in request_payload:            
+                if not first:
+                    yield ','
+                else:
+                    first = False
                 
-                xmlString = base64.b64decode(xmlString).decode(xml_payload_encoding)  # decode from base64 to binary, then to string
-
-            if preserve_entity is True:
-                #Keep all incoming properties in addition to the parsed xml
-                if(hasXMLData):                
-                    item["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)                                     
-                result.append(item.copy())          
-     
-            else:
-                xml_as_dict = {}
-                xml_as_dict = preserve_sesam_special_fields(xml_as_dict, item)
+                xmlString = None
+                hasXMLData = item.get(xml_payload_node) != None
+                
                 if(hasXMLData):
-                    xml_as_dict["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)
-                result.append(xml_as_dict)
-                                
-    except Exception as ex:
-        logger.error(f"Exiting with error: {ex}")
-        
-    return Response(response=json.dumps(result), mimetype='application/json')
+                    xmlString = item[xml_payload_node]                                  
+                    if(xmlString.startswith("~b")):
+                        xmlString = xmlString[2:]  # substring starting from position 2                            
+                    
+                    xmlString = base64.b64decode(xmlString).decode(xml_payload_encoding)  # decode from base64 to binary, then to string
+
+                if preserve_entity is True:
+                    #Keep all incoming properties in addition to the parsed xml
+                    if(hasXMLData):                
+                        item["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)
+                    yield json.dumps(item.copy())      
+                else:
+                    xml_as_dict = {}
+                    xml_as_dict = preserve_sesam_special_fields(xml_as_dict, item)
+                    if(hasXMLData):
+                        xml_as_dict["xml_as_json"] = xmltodict.parse(xmlString,encoding=xml_payload_encoding, xml_attribs=True)
+                    yield json.dumps(xml_as_dict)
+            yield ']'
+                                    
+        except Exception as ex:
+            logger.error(f"Exiting with error: {ex}")
+
+    return Response(response=emit_entities(), mimetype='application/json')
     
 def preserve_sesam_special_fields(target, original):
     """
@@ -202,12 +208,6 @@ def preserve_sesam_special_fields(target, original):
             target[attr] = original[attr]
           
     return target
-
-def yield_entities(data):
-
-    for item in data:
-
-        yield item
 
 def parse_boolean_from_param(param):
     """
