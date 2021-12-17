@@ -47,7 +47,7 @@ It supports updated path if it exists, if not; remove updated_path and since fro
 
 ```
 <html>
-<bar>Hei</bar>
+<bar>Hello</bar>
 </html>
 ```
 
@@ -93,6 +93,6 @@ will be rendered as
 
 ```
 <html>
-<bar>Hei</bar>
+<bar>Hello</bar>
 </html>
 ```
