@@ -4,7 +4,7 @@ import xmltodict
 import yaml
 
 from xml.parsers.expat import ExpatError
-from flask import Flask, request, Response, jsonify
+from flask import Flask, abort, request, Response, jsonify
 import os
 import requests
 
@@ -140,7 +140,7 @@ def xml_string_to_json():
     - xml attributes will be prefixed by "@" in the json data
     - accepts entities with non-existing XML string
     """
-    
+
     if(not request.is_json):        
         return "Request body was not JSON", 400
     
@@ -159,7 +159,8 @@ def xml_string_to_json():
             # Sesam packs entities in an array before firing off a request and expects an array back. 
             yield '['
             first = True
-            for item in request_payload:            
+            for item in request_payload:      
+                currentItem = item["_id"]      
                 if not first:
                     yield ','
                 else:
@@ -189,7 +190,8 @@ def xml_string_to_json():
             yield ']'
                                     
         except Exception as ex:
-            logger.error(f"Exiting with error: {ex}")
+            logger.error(f"Exiting with error: {ex} - suspected entity = {currentItem}")
+            abort(500)
 
     return Response(response=emit_entities(), mimetype='application/json')
     
