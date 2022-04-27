@@ -1,4 +1,4 @@
-FROM python:3-alpine
+FROM python:3.9-alpine3.15
 LABEL author="Endre Brønnum"
 LABEL author.email="endre.bronnum@sesam.io"
 
